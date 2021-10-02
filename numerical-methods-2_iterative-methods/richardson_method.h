@@ -14,7 +14,7 @@
 // @return 1 => aproximate solution
 // @return 2 => error
 // @return 3 => number of iterations
-std::tuple<DMatrix, double, unsigned int> iteration_method(const DMatrix &A, const DMatrix &b, double epsilon, unsigned int maxIterations) {
+std::tuple<DMatrix, double, unsigned int> richardson_method(const DMatrix &A, const DMatrix &b, double epsilon, unsigned int maxIterations) {
 	const auto N = A.rows();
 
 	DMatrix X(N, 1); // current X estimate

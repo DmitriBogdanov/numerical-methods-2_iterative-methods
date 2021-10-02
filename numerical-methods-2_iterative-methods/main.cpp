@@ -5,7 +5,7 @@
 #include "cmatrix.hpp"
 #include "static_timer.hpp"
 
-#include "iteration_method.h"
+#include "richardson_method.h"
 #include "jacobi_method.h"
 #include "seidel_method.h"
 
@@ -66,12 +66,12 @@ std::tuple<DMatrix, DMatrix> parse_system(const std::string &filepath) {
 
 
 // Method 1
-void solve_iteration(const DMatrix &A, const DMatrix &b, double epsilon, unsigned int maxIterations) {
+void solve_richardson(const DMatrix &A, const DMatrix &b, double epsilon, unsigned int maxIterations) {
 	std::cout << "\n##### Method -> Regular iteration method\n##### Norm   -> Cubic\n>>> Solving...\n";
 
 	// Compute
 	StaticTimer::start();
-	const auto [solution, error, iterations] = iteration_method(A, b, epsilon, maxIterations);
+	const auto [solution, error, iterations] = richardson_method(A, b, epsilon, maxIterations);
 	const auto elapsed = StaticTimer::elapsed();
 
 	// Display
@@ -143,7 +143,7 @@ int main(int argc, char** argv) {
 	std::cout << '\n';
 
 	// Method 2
-	solve_iteration(A, b, precision, maxIterations);
+	solve_richardson(A, b, precision, maxIterations);
 
 	// Method 2
 	///solve_jacobi(A, b, precision, maxIterations);
