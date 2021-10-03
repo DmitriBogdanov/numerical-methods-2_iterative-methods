@@ -17,18 +17,14 @@
 std::tuple<DMatrix, double, unsigned int> jacobi_method(const DMatrix &A, const DMatrix &b, double epsilon, unsigned int maxIterations) {
 	const auto N = A.rows();
 
-	DMatrix X(N, 1); // current X estimate
-	DMatrix X0(N, 1); // previous X estimate
-	double differenceNorm = INF; // ||X - X0||
 	
-	fill(X0, 0.); // first estimate is zero-vector
 
-	// Find ||C|| through C = -D^-1 (L + U)
+	// Find ||C|| through C[i][j] = -A[i][j] / A[i][i] and C[i][i] = 0
 	double normC = 0.;
 	for (size_t i = 0; i < N; ++i) {
 		double sum = 0.;
 		for (size_t j = 0; j < i; ++j) sum += std::abs(A[i][j]);
-		// (j == i) can be skipped since we know that L+U has zeroes on diagonal
+		// skip i=j since C[i][i]=0
 		for (size_t j = i + 1; j < N; ++j) sum += std::abs(A[i][j]);
 
 		normC = std::max(normC, sum / A[i][i]);
@@ -38,7 +34,13 @@ std::tuple<DMatrix, double, unsigned int> jacobi_method(const DMatrix &A, const 
 	const double trueEpsilon = epsilon * (1 - normC) / normC;
 	
 	// Finally, iteration
+	DMatrix X(N, 1); // current X estimate
+	DMatrix X0(N, 1); // previous X estimate
+	double differenceNorm = INF; // ||X - X0||
+
 	size_t iterations = 0;
+	fill(X0, 0.); // first estimate is zero-vector
+
 	do {
 		++iterations;
 

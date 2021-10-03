@@ -16,13 +16,8 @@
 // @return 3 => number of iterations
 std::tuple<DMatrix, double, unsigned int> seidel_method(const DMatrix &A, const DMatrix &b, double epsilon, unsigned int maxIterations) {
 	const auto N = A.rows();
-
-	DMatrix X(N, 1); // current X estimate
-	DMatrix X0(N, 1); // previous X estimate
-	double differenceNorm = INF; // ||X - X0||
-
-	fill(X0, 0.); // first estimate is zero-vector
 	
+	/// Is that requred?
 	// Since Gauss-Seidel method only guarantees convergence for diagonally-dominant (or symmetrical + positive) matrices
 	// We need to do pivotisation (partial) to make the equations diagonally dominant
 	/*for (size_t i = 0; i < N; ++i)                    
@@ -31,7 +26,31 @@ std::tuple<DMatrix, double, unsigned int> seidel_method(const DMatrix &A, const 
 				for (size_t j = 0; j < N + 1; ++j)
 					std::swap(A[i][j], A[k][j]);*/
 
+	// Find ||C|| and ||CU|| through C[i][j] = -A[i][j] / A[i][i] and C[i][i] = 0
+	double normC = 0.;
+	double normCU = 0.;
+	for (size_t i = 0; i < N; ++i) {
+		double sumC = 0.;
+		double sumCU = 0.;
+		for (size_t j = 0; j < i; ++j) sumC += std::abs(A[i][j]);
+		// skip i=j since C[i][i]=0
+		for (size_t j = i + 1; j < N; ++j) sumC += std::abs(A[i][j]), sumCU += std::abs(A[i][j]);
+
+		normC = std::max(normC, sumC / A[i][i]);
+		normCU = std::max(normCU, sumCU / A[i][i]);
+	}
+
+	// Find trueEpsilon = epsilon (1 - ||C||) / ||CU|| that will be used for iteration
+	const double trueEpsilon = epsilon * (1 - normC) / normCU;
+
+	// Finally, iteration
+	DMatrix X(N, 1); // current X estimate
+	DMatrix X0(N, 1); // previous X estimate
+	double differenceNorm = INF; // ||X - X0||
+
 	size_t iterations = 0;
+	fill(X0, 0.); // first estimate is zero-vector
+
 	do {
 		++iterations;
 
@@ -63,7 +82,7 @@ std::tuple<DMatrix, double, unsigned int> seidel_method(const DMatrix &A, const 
 			<< PRINT_INDENT << "X =\n";
 		X.print();
 		#endif
-	} while (differenceNorm > epsilon && iterations < maxIterations);
+	} while (differenceNorm > trueEpsilon && iterations < maxIterations);
 
 	return { X, differenceNorm, iterations };
 }

@@ -5,7 +5,7 @@ Contains implementations of following iterative methods for solving linear syste
 * Richardson iteration
 * Jacobi method
 * Gauss–Seidel method
-* Successive over-relaxation
+* Successive over-relaxation for tridiagonal matrices
 
 ## Compilation
 
@@ -17,12 +17,17 @@ Contains implementations of following iterative methods for solving linear syste
 Input is a .dat file, containing floating-point matrix that represents our linear system. To configure input file, output path and other parameters, place config file of the
 following format into the same folder as executable:
 
-* Line 1: <input relative path>
-* Line 2: <output relative path>
-* Line 3: <target precision>
-* Line 4: <max iterations>
+* Line 1: [input relative path]
+* Line 2: [output relative path]
+* Line 3: [target precision]
+* Line 4: [max iterations]
 
 ## Version history
+
+* 00.02
+    * Bugfixes in Gauss–Seidel method
+    * Implementation of successive over-relaxation for tridiagonal matrices
+    * Now exceptions are caught properly
 
 * 00.01
     * Implemented contiguous matrix class 'CMatrix<>'
