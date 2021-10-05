@@ -75,8 +75,11 @@ void solve_richardson(const DMatrix &A, const DMatrix &b, double epsilon, unsign
 	std::cout << "\n##### Method -> Richardson iteration\n##### Norm   -> Cubic\n>>> Solving...\n";
 
 	// Compute
+	auto copyOfA = A;
+	auto copyOfB = b;
+
 	StaticTimer::start();
-	const auto [solution, error, iterations] = richardson_method(A, b, epsilon, maxIterations);
+	const auto [solution, error, iterations] = richardson_method(copyOfA, copyOfB, epsilon, maxIterations);
 	const auto elapsed = StaticTimer::elapsed();
 
 	// Display
@@ -141,7 +144,7 @@ std::tuple<DMatrix, DMatrix> generate_tridiagonal_system() {
 		Diagonals[i][0] = ai;
 		Diagonals[i][1] = bi;
 		Diagonals[i][2] = ci;
-		b(i) = i + 1;
+		b(i) = i + 1.;
 	}
 
 	return { Diagonals, b };
@@ -189,7 +192,7 @@ int main(int argc, char** argv) {
 		std::cout << '\n';
 
 		// Method 2
-		///solve_richardson(A, b, precision, maxIterations);
+		solve_richardson(A, b, precision, maxIterations);
 
 		// Method 2
 		solve_jacobi(A, b, precision, maxIterations);
@@ -199,10 +202,7 @@ int main(int argc, char** argv) {
 
 		// Method 4
 		const auto [TridiagonalA, TridiagonalB] = generate_tridiagonal_system();
-		TridiagonalA.print();
-		TridiagonalB.print();
 		solve_relaxation(TridiagonalA, TridiagonalB, precision, maxIterations);
-
 	}
 	// If caught any errors, show error message
 	catch (const std::runtime_error& err) {

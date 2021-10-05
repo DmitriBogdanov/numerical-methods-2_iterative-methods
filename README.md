@@ -25,6 +25,9 @@ following format into the same folder as executable:
 ## Version history
 
 * 00.02
+    * Implemented Richardson iteration method
+
+* 00.02
     * Bugfixes in Gauss–Seidel method
     * Implementation of successive over-relaxation for tridiagonal matrices
     * Now exceptions are caught properly

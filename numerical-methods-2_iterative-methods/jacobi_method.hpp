@@ -14,10 +14,8 @@
 // @return 1 => aproximate solution
 // @return 2 => error
 // @return 3 => number of iterations
-std::tuple<DMatrix, double, unsigned int> jacobi_method(const DMatrix &A, const DMatrix &b, double epsilon, unsigned int maxIterations) {
+inline std::tuple<DMatrix, double, unsigned int> jacobi_method(const DMatrix &A, const DMatrix &b, double epsilon, unsigned int maxIterations) {
 	const auto N = A.rows();
-
-	
 
 	// Find ||C|| through C[i][j] = -A[i][j] / A[i][i] and C[i][i] = 0
 	double normC = 0.;
@@ -31,7 +29,7 @@ std::tuple<DMatrix, double, unsigned int> jacobi_method(const DMatrix &A, const 
 	}
 
 	// Find trueEpsilon = epsilon (1 - ||C||) / ||C|| that will be used for iteration
-	const double trueEpsilon = epsilon * (1 - normC) / normC;
+	const double trueEpsilon = epsilon * (1. - normC) / normC;
 	
 	// Finally, iteration
 	DMatrix X(N, 1); // current X estimate
