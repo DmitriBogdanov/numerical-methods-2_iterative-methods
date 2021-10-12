@@ -3,15 +3,12 @@
 #include <tuple> // returning multiple variables
 
 #include "cmatrix.hpp"
+#include "stop_conditions.hpp"
 #include "math_helpers.hpp"
 
-#ifdef _DEBUG
-#define RICHARDSON_DEBUG // print more info to console when defined
-#endif
 
 
-
-//   Richardson method requires all diagonal elements of diagonally-dominant matrix to be positive,
+// Richardson method requires all diagonal elements of diagonally-dominant matrix to be positive,
 // during preprocessing we multiply some of the equations by -1 to ensure that condition without
 // changing the solutions. Also, by multiplying the whole system by Tau, we can avoid excessive
 // multiplications by Tau during the iteration and use formulas as if Tau was equal to 1.
@@ -30,29 +27,22 @@ inline void richardson_preprocess(DMatrix &A, DMatrix &b) {
 	}
 
 	const double Tau = 1. / maxDiagonalElement;
+	//const double Tau = 0.0096429; // optimal Tau for variant 2
 
 	// Multiply whole system by Tau
 	multiply(A, A, Tau);
 	multiply(b, b, Tau);
 
-#ifdef RICHARDSON_DEBUG
-	std::cout
-		<< ">>> Tau =\n"
-		<< PRINT_INDENT << Tau << '\n';
-#endif
+	std::cout << ">>> Tau = " << Tau << '\n';
 }
 
 
-// @return 1 => aproximate solution
-// @return 2 => error
-// @return 3 => number of iterations
-// Note that richardson method changes matrices A, b as it requires certain preprocessing of the system
-inline std::tuple<DMatrix, double, unsigned int> richardson_method(DMatrix &A, DMatrix &b, double epsilon, unsigned int maxIterations) {
-	const auto N = A.rows();
 
-	// Preprocess system in a way that makes it suitable for the method while also ensuring that
-	// ||C|| < 1, afterwards we can use formulas as if Tau was 1
-	richardson_preprocess(A, b);
+// @return 1 => aproximate solution
+// @return 2 => number of iterations
+// -> stops when ||X_k+1 - X_k|| < (1-||C||)/||C||
+inline std::tuple<DMatrix, unsigned int> richardson_method(const DMatrix &A, const DMatrix &b, StopCondition stopCond) {
+	const auto N = A.rows();
 
 	// Find ||C|| = ||E - Tau A|| = ||E - A||
 	double normC = 0.;
@@ -65,22 +55,41 @@ inline std::tuple<DMatrix, double, unsigned int> richardson_method(DMatrix &A, D
 		normC = std::max(normC, sum);
 	}
 
-	#ifdef RICHARDSON_DEBUG
-	std::cout
-		<< ">>> ||C|| =\n"
-		<< PRINT_INDENT << normC << '\n';
-	#endif
-
-	// Find trueEpsilon = epsilon (1 - ||C||) / ||C|| that will be used for iteration
-	const double trueEpsilon = epsilon * (1. - normC) / normC;
+	std::cout << ">>> ||C|| = " << normC << "\n";
 
 	// Finally, iteration
 	DMatrix X(N, 1); // current X estimate
 	DMatrix X0(N, 1); // previous X estimate
-	double differenceNorm = INF; // ||X - X0||
 
 	size_t iterations = 0;
 	fill(X0, 0.); // first estimate is zero-vector
+
+	DMatrix buffer(N, 1);
+	bool flag = false; // true => stop iteration
+
+	// Handle stop condition
+	switch (stopCond.type) {
+	case StopConditionType::MAX_ESTIMATE:
+		stopCond.max_iterations = std::ceil(max_iteration_estimate(stopCond.epsilon, normC, vector_difference_norm(X0, *stopCond.precise_solution)));
+		break;
+
+	case StopConditionType::MIN_ESTIMATE:
+		break;
+
+	case StopConditionType::DEFAULT:
+		stopCond.epsilon = stopCond.epsilon * (1. - normC) / normC;
+		break;
+
+	case StopConditionType::ALTERNATIVE_1:
+		stopCond.epsilon_0 = 1e-8;
+		break;
+
+	case StopConditionType::ALTERNATIVE_2:
+		break;
+
+	default:
+		throw std::runtime_error("ERROR: Unknown stop condition");
+	}
 
 	do {
 		++iterations;
@@ -95,23 +104,37 @@ inline std::tuple<DMatrix, double, unsigned int> richardson_method(DMatrix &A, D
 			X(i) = X0(i) + b(i) - sumI;
 		}
 
-		// Find ||X - X0||
-		// Cubic norm => max_i { SUM_j |matrix[i][j]|}
-		differenceNorm = 0.;
-		for (size_t i = 0; i < N; ++i) differenceNorm = std::max(differenceNorm, std::abs(X(i) - X0(i)));
+		// Handle stop condition
+		switch (stopCond.type) {
+		case StopConditionType::MAX_ESTIMATE:
+			flag = false;
+			break;
 
+		case StopConditionType::MIN_ESTIMATE:
+			flag = (vector_difference_norm(X, *stopCond.precise_solution) < stopCond.epsilon);
+			break;
+
+		case StopConditionType::DEFAULT:
+			flag = (vector_difference_norm(X, X0) < stopCond.epsilon);
+			break;
+
+		case StopConditionType::ALTERNATIVE_1:
+			flag = (vector_difference_norm(X, X0) / (stopCond.epsilon_0 + X0.norm()) < stopCond.epsilon);
+			break;
+
+		case StopConditionType::ALTERNATIVE_2:
+			multiply(buffer, A, X);
+			flag = (vector_difference_norm(buffer, b) < stopCond.epsilon);
+			break;
+
+		default:
+			throw std::runtime_error("ERROR: Unknown stop condition");
+		}
+		
 		// Now X becomes X0
 		X0 = X;
 
-		#ifdef RICHARDSON_DEBUG
-		std::cout
-			<< ">>> Iteration [" << iterations << "]\n"
-			<< PRINT_INDENT << "||X - X0|| =\n"
-			<< PRINT_INDENT << differenceNorm << "\n"
-			<< PRINT_INDENT << "X =\n";
-		X.print();
-		#endif
-	} while (differenceNorm > trueEpsilon && iterations < maxIterations);
+	} while (!flag && iterations < stopCond.max_iterations);
 
-	return { X, differenceNorm, iterations };
+	return { X, iterations };
 }

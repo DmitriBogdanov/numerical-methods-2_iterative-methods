@@ -3,18 +3,14 @@
 #include <tuple> // returning multiple variables
 
 #include "cmatrix.hpp"
+#include "stop_conditions.hpp"
 #include "math_helpers.hpp"
-
-#ifdef _DEBUG
-#define JACOBI_DEBUG // print more info to console when defined
-#endif
 
 
 
 // @return 1 => aproximate solution
-// @return 2 => error
-// @return 3 => number of iterations
-inline std::tuple<DMatrix, double, unsigned int> jacobi_method(const DMatrix &A, const DMatrix &b, double epsilon, unsigned int maxIterations) {
+// @return 2 => number of iterations
+inline std::tuple<DMatrix, unsigned int> jacobi_method(const DMatrix &A, const DMatrix &b, StopCondition stopCond) {
 	const auto N = A.rows();
 
 	// Find ||C|| through C[i][j] = -A[i][j] / A[i][i] and C[i][i] = 0
@@ -28,16 +24,41 @@ inline std::tuple<DMatrix, double, unsigned int> jacobi_method(const DMatrix &A,
 		normC = std::max(normC, sum / A[i][i]);
 	}
 
-	// Find trueEpsilon = epsilon (1 - ||C||) / ||C|| that will be used for iteration
-	const double trueEpsilon = epsilon * (1. - normC) / normC;
+	std::cout << ">>> ||C|| = " << normC << "]\n";
 	
 	// Finally, iteration
 	DMatrix X(N, 1); // current X estimate
 	DMatrix X0(N, 1); // previous X estimate
-	double differenceNorm = INF; // ||X - X0||
 
 	size_t iterations = 0;
 	fill(X0, 0.); // first estimate is zero-vector
+
+	DMatrix buffer(N, 1);
+	bool flag = false; // true => stop iteration
+
+	// Handle stop condition
+	switch (stopCond.type) {
+	case StopConditionType::MAX_ESTIMATE:
+		stopCond.max_iterations = std::ceil(max_iteration_estimate(stopCond.epsilon, normC, vector_difference_norm(X0, *stopCond.precise_solution)));
+		break;
+
+	case StopConditionType::MIN_ESTIMATE:
+		break;
+
+	case StopConditionType::DEFAULT:
+		stopCond.epsilon = stopCond.epsilon * (1. - normC) / normC;
+		break;
+
+	case StopConditionType::ALTERNATIVE_1:
+		stopCond.epsilon_0 = 1e-8;
+		break;
+
+	case StopConditionType::ALTERNATIVE_2:
+		break;
+
+	default:
+		throw std::runtime_error("ERROR: Unknown stop condition");
+	}
 
 	do {
 		++iterations;
@@ -51,23 +72,37 @@ inline std::tuple<DMatrix, double, unsigned int> jacobi_method(const DMatrix &A,
 			X(i) = (b(i) + sum) / A[i][i];
 		}
 
-		// Find ||X - X0||
-		// Cubic norm => max_i { SUM_j |matrix[i][j]|}
-		differenceNorm = 0.;
-		for (size_t i = 0; i < N; ++i) differenceNorm = std::max( differenceNorm, std::abs(X(i) - X0(i)) );
+		// Handle stop condition
+		switch (stopCond.type) {
+		case StopConditionType::MAX_ESTIMATE:
+			flag = false;
+			break;
+
+		case StopConditionType::MIN_ESTIMATE:
+			flag = (vector_difference_norm(X, *stopCond.precise_solution) < stopCond.epsilon);
+			break;
+
+		case StopConditionType::DEFAULT:
+			flag = (vector_difference_norm(X, X0) < stopCond.epsilon);
+			break;
+
+		case StopConditionType::ALTERNATIVE_1:
+			flag = (vector_difference_norm(X, X0) / (stopCond.epsilon_0 + X0.norm()) < stopCond.epsilon);
+			break;
+
+		case StopConditionType::ALTERNATIVE_2:
+			multiply(buffer, A, X);
+			flag = (vector_difference_norm(buffer, b) < stopCond.epsilon);
+			break;
+
+		default:
+			throw std::runtime_error("ERROR: Unknown stop condition");
+		}
 
 		// Now X becomes X0
 		X0 = X;
 
-		#ifdef JACOBI_DEBUG
-		std::cout
-			<< ">>> Iteration [" << iterations << "]\n"
-			<< PRINT_INDENT << "||X - X0|| =\n"
-			<< PRINT_INDENT << differenceNorm << "\n"
-			<< PRINT_INDENT << "X =\n";
-		X.print();
-		#endif
-	} while (differenceNorm > trueEpsilon && iterations < maxIterations);
+	} while (!flag && iterations < stopCond.max_iterations);
 
-	return { X, differenceNorm, iterations };
+	return { X, iterations };
 }

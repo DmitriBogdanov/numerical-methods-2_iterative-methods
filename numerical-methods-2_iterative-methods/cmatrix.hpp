@@ -70,7 +70,7 @@ public:
 	}
 
 	// Norms
-	T norm_cubic() const {
+	T norm() const {
 		// Cubic norm => max_i { SUM_j |matrix[i][j]|}
 		T maxSum(0);
 
@@ -87,21 +87,21 @@ public:
 		return maxSum;
 	}
 
-	T norm_octahedral() const {
-		// Octahedral norm => max_i { SUM_j |matrix[i][j]|}
-		T maxSum(0);
+	//T norm_octahedral() const {
+	//	// Octahedral norm => max_i { SUM_j |matrix[i][j]|}
+	//	T maxSum(0);
 
-		// Go over each row calculating SUM_j |matrix[i][j]|, select max_i
-		for (size_t j = 0; j < _cols; ++j) {
-			T sum(0);
+	//	// Go over each row calculating SUM_j |matrix[i][j]|, select max_i
+	//	for (size_t j = 0; j < _cols; ++j) {
+	//		T sum(0);
 
-			for (size_t i = 0; i < _rows; ++i) sum += std::abs(_data[i * _cols + j]);
+	//		for (size_t i = 0; i < _rows; ++i) sum += std::abs(_data[i * _cols + j]);
 
-			maxSum = std::max(maxSum, sum);
-		}
+	//		maxSum = std::max(maxSum, sum);
+	//	}
 
-		return maxSum;
-	}
+	//	return maxSum;
+	//}
 };
 
 
@@ -143,8 +143,8 @@ void multiply(CMatrix<T> &dest, const CMatrix<T> &src1, const CMatrix<T> &src2) 
 	fill(dest, static_cast<T>(0));
 
 	for (size_t i = 0; i < src1.rows(); ++i)
-		for (size_t k = 0; k < src1._cols(); ++k)
-			for (size_t j = 0; j < src2._cols(); ++j)
+		for (size_t k = 0; k < src1.cols(); ++k)
+			for (size_t j = 0; j < src2.cols(); ++j)
 				dest[i][j] += src1[i][k] * src2[k][j];
 				// note that naive loop order would be [i]->[j]->[k], swapping [k] and [j]
 				// loops reduces the number of cache misses since we access contiguously
@@ -155,4 +155,12 @@ void multiply(CMatrix<T> &dest, const CMatrix<T> &src1, const CMatrix<T> &src2) 
 template<typename T>
 void multiply(CMatrix<T> &dest, const CMatrix<T> &src, T value) {
 	for (size_t k = 0; k < dest.size(); ++k) dest(k) = src(k) * value;
+}
+
+template<typename T>
+T vector_difference_norm(const CMatrix<T> &src1, const CMatrix<T> &src2) {
+	T norm(0);
+	for (size_t i = 0; i < src1.size(); ++i) norm = std::max(norm, std::abs(src1(i) - src2(i)));
+
+	return norm;
 }

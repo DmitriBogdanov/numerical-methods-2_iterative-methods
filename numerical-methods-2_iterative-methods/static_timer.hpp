@@ -9,7 +9,7 @@
 struct StaticTimer {
 	using Clock = std::chrono::steady_clock;
 	using Milliseconds = std::chrono::milliseconds;
-
+	
 	inline static void start() {
 		_start_timepoint = Clock::now();
 	}

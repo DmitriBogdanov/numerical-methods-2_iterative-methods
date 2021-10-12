@@ -7,6 +7,8 @@ Contains implementations of following iterative methods for solving linear syste
 * Gauss–Seidel method
 * Successive over-relaxation for tridiagonal matrices
 
+Note that present implementations are intended for study purposes and analyzing properties of aforementioned methods, as such they are not meant to be used in any sort of high-performance production code.
+
 ## Compilation
 
 * Recommended compiler: MSVC v142
@@ -14,8 +16,7 @@ Contains implementations of following iterative methods for solving linear syste
 
 ## Usage
 
-Input is a .dat file, containing floating-point matrix that represents our linear system. To configure input file, output path and other parameters, place config file of the
-following format into the same folder as executable:
+Input is a .dat file, containing floating-point matrix that represents any diagonally-dominant linear system. To configure input file, output path and other parameters, place config file of the following format into the same folder as executable:
 
 * Line 1: [input relative path]
 * Line 2: [output relative path]
@@ -24,7 +25,13 @@ following format into the same folder as executable:
 
 ## Version history
 
-* 00.02
+* 00.04
+    * Implemented variety of stopping conditions
+    * Implemented analysis tools for systems with predefined solutions
+    * Implemented analythical estimates for number of iterations
+    * Mass refactoring
+
+* 00.03
     * Implemented Richardson iteration method
 
 * 00.02

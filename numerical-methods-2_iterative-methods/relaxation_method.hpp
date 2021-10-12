@@ -5,19 +5,12 @@
 #include "cmatrix.hpp"
 #include "math_helpers.hpp"
 
-#ifdef _DEBUG
-#define RELAXATION_DEBUG // print more info to console when defined
-#endif
-
 
 
 // @return 1 => aproximate solution
-// @return 2 => error
-// @return 3 => number of iterations
-inline std::tuple<DMatrix, double, unsigned int> relaxation_method(const DMatrix &Diagonals, const DMatrix &b, double epsilon, unsigned int maxIterations) {
+// @return 2 => number of iterations
+inline std::tuple<DMatrix, unsigned int> relaxation_method(const DMatrix &Diagonals, const DMatrix &b, double w, StopCondition stopCond) {
 	const auto N = Diagonals.rows();
-
-	const double w = 0.5; // relaxation parameter
 
 	// Find ||C|| and ||CU|| through C[i][j] = -A[i][j] / A[i][i] and C[i][i] = 0
 	double normC = 0.;
@@ -31,16 +24,37 @@ inline std::tuple<DMatrix, double, unsigned int> relaxation_method(const DMatrix
 		normCU = std::max(normCU, sumCU / Diagonals[i][1]);
 	}
 
-	// Find trueEpsilon = epsilon (1 - ||C||) / ||CU|| that will be used for iteration
-	const double trueEpsilon = epsilon * (1 - normC) / normCU;
+	std::cout << ">>> ||C|| = " << normC << "]\n";
+	std::cout << ">>> ||CU|| = " << normCU << "]\n";
 
 	// Finally, iteration
 	DMatrix X(N, 1); // current X estimate
 	DMatrix X0(N, 1); // previous X estimate
-	double differenceNorm = INF; // ||X - X0||
 
 	size_t iterations = 0;
 	fill(X0, 0.); // first estimate is zero-vector
+
+	DMatrix buffer(N, 1);
+	bool flag = false; // true => stop iteration
+
+	//double minerr = INF;
+
+	// Handle stop condition
+	switch (stopCond.type) {
+	case StopConditionType::MAX_ESTIMATE:
+		stopCond.max_iterations = std::ceil(max_iteration_estimate(stopCond.epsilon, normC, vector_difference_norm(X0, *stopCond.precise_solution)));
+		break;
+
+	case StopConditionType::MIN_ESTIMATE:
+		break;
+
+	case StopConditionType::DEFAULT:
+		stopCond.epsilon = stopCond.epsilon * (1. - normC) / normC;
+		break;
+
+	default:
+		throw std::runtime_error("ERROR: Unknown stop condition");
+	}
 	
 	do {
 		++iterations;
@@ -48,30 +62,39 @@ inline std::tuple<DMatrix, double, unsigned int> relaxation_method(const DMatrix
 		// Compute new X
 		for (size_t i = 0; i < N; ++i) {
 			// Compute X[i] = (1 - w) X0[i] + w / A[i][i] ( b[i] - SUM_0<=j<i { A[i][j] X[j] } - SUM_i+1<=j<N { A[i][j] X0[j] } )
-			double sum1 = (i > 0) ? -Diagonals[i][0] * X(i - 1) : 0.;
-			double sum2 = (i < N - 1) ? -Diagonals[i][2] * X0(i + 1) : 0.;
+			double sum1 = (i > 0) ? Diagonals[i][0] * X(i - 1) : 0.;
+			double sum2 = (i < N - 1) ? Diagonals[i][2] * X0(i + 1) : 0.;
 				// checks 'i' so we don't go out of bounds
 			
-			X(i) = (1. - w) * X0(i) + (b(i) + sum1 + sum2) * w / Diagonals[i][1];
+			X(i) = (1. - w) * X0(i) + (b(i) - sum1 - sum2) * w / Diagonals[i][1];
 		}
 
-		// Find ||X - X0||
-		// Cubic norm => max_i { SUM_j |matrix[i][j]|}
-		differenceNorm = 0.;
-		for (size_t i = 0; i < N; ++i) differenceNorm = std::max(differenceNorm, std::abs(X(i) - X0(i)));
+		// Handle stop condition
+		switch (stopCond.type) {
+		case StopConditionType::MAX_ESTIMATE:
+			flag = false;
+			break;
+
+		case StopConditionType::MIN_ESTIMATE:
+			flag = (vector_difference_norm(X, *stopCond.precise_solution) < stopCond.epsilon);
+			/*if (vector_difference_norm(X, X0) < minerr) {
+				minerr = vector_difference_norm(X, X0);
+				std::cout << "[" << iterations << "] -> " << vector_difference_norm(X, *stopCond.precise_solution) << '\n';
+			}*/
+			break;
+
+		case StopConditionType::DEFAULT:
+			flag = (vector_difference_norm(X, X0) < stopCond.epsilon);
+			break;
+
+		default:
+			throw std::runtime_error("ERROR: Unknown stop condition");
+		}
 
 		// Now X becomes X0
 		X0 = X;
 
-		#ifdef RELAXATION_DEBUG
-		std::cout
-			<< ">>> Iteration [" << iterations << "]\n"
-			<< PRINT_INDENT << "||X - X0|| =\n"
-			<< PRINT_INDENT << differenceNorm << "\n"
-			<< PRINT_INDENT << "X =\n";
-		X.print();
-		#endif
-	} while (differenceNorm > trueEpsilon && iterations < maxIterations);
+	} while (!flag && iterations < stopCond.max_iterations);
 
-	return { X, differenceNorm, iterations };
+	return { X, iterations };
 }
