@@ -267,29 +267,29 @@ int main(int argc, char** argv) {
 		StopCondition stopCond_alternative_2 = { StopConditionType::ALTERNATIVE_2, precision, maxIterations, NULL };
 
 		// Method 1
-		solve_richardson(A, b, preciseSolution, stopCond_max_estimate, outputPath + "[richardson][max_estimate]" + outputExtension);
-		solve_richardson(A, b, preciseSolution, stopCond_min_estimate, outputPath + "[richardson][min_estimate]" + outputExtension);
+		///solve_richardson(A, b, preciseSolution, stopCond_max_estimate, outputPath + "[richardson][max_estimate]" + outputExtension);
+		///solve_richardson(A, b, preciseSolution, stopCond_min_estimate, outputPath + "[richardson][min_estimate]" + outputExtension);
 		solve_richardson(A, b, preciseSolution, stopCond_default, outputPath + "[richardson][default]" + outputExtension);
-		solve_richardson(A, b, preciseSolution, stopCond_alternative_1, outputPath + "[richardson][alternative_1]" + outputExtension);
-		solve_richardson(A, b, preciseSolution, stopCond_alternative_2, outputPath + "[richardson][alternative_2]" + outputExtension);
-
+		///solve_richardson(A, b, preciseSolution, stopCond_alternative_1, outputPath + "[richardson][alternative_1]" + outputExtension);
+		///solve_richardson(A, b, preciseSolution, stopCond_alternative_2, outputPath + "[richardson][alternative_2]" + outputExtension);
+		  
 		// Method 2
-		solve_jacobi(A, b, preciseSolution, stopCond_max_estimate, outputPath + "[jacobi][max_estimate]" + outputExtension);
-		solve_jacobi(A, b, preciseSolution, stopCond_min_estimate, outputPath + "[jacobi][min_estimate]" + outputExtension);
+		///solve_jacobi(A, b, preciseSolution, stopCond_max_estimate, outputPath + "[jacobi][max_estimate]" + outputExtension);
+		///solve_jacobi(A, b, preciseSolution, stopCond_min_estimate, outputPath + "[jacobi][min_estimate]" + outputExtension);
 		solve_jacobi(A, b, preciseSolution, stopCond_default, outputPath + "[jacobi][default]" + outputExtension);
 
 		// Method 3
-		solve_seidel(A, b, preciseSolution, stopCond_max_estimate, outputPath + "[seidel][max_estimate]" + outputExtension);
-		solve_seidel(A, b, preciseSolution, stopCond_min_estimate, outputPath + "[seidel][min_estimate]" + outputExtension);
+		///solve_seidel(A, b, preciseSolution, stopCond_max_estimate, outputPath + "[seidel][max_estimate]" + outputExtension);
+		///solve_seidel(A, b, preciseSolution, stopCond_min_estimate, outputPath + "[seidel][min_estimate]" + outputExtension);
 		solve_seidel(A, b, preciseSolution, stopCond_default, outputPath + "[seidel][default]" + outputExtension);
 
 		// Method 4
 		const auto [TridiagonalA, TridiagonalB, TridiagonalPreciseSol] = generate_tridiagonal_system();
 		TridiagonalB.print();
 		const StopCondition relaxationStopCond = { StopConditionType::MIN_ESTIMATE, precision, maxIterations, &TridiagonalPreciseSol };
-		solve_relaxation(TridiagonalA, TridiagonalB, TridiagonalPreciseSol, 0.5, relaxationStopCond, outputPath + "[relaxation][w=0.5]" + outputExtension);
-		solve_relaxation(TridiagonalA, TridiagonalB, TridiagonalPreciseSol, 1.0, relaxationStopCond, outputPath + "[relaxation][w=1.0]" + outputExtension);
-		solve_relaxation(TridiagonalA, TridiagonalB, TridiagonalPreciseSol, 1.5, relaxationStopCond, outputPath + "[relaxation][w=1.5]" + outputExtension);
+		///solve_relaxation(TridiagonalA, TridiagonalB, TridiagonalPreciseSol, 0.5, relaxationStopCond, outputPath + "[relaxation][w=0.5]" + outputExtension);
+		///solve_relaxation(TridiagonalA, TridiagonalB, TridiagonalPreciseSol, 1.0, relaxationStopCond, outputPath + "[relaxation][w=1.0]" + outputExtension);
+		///solve_relaxation(TridiagonalA, TridiagonalB, TridiagonalPreciseSol, 1.5, relaxationStopCond, outputPath + "[relaxation][w=1.5]" + outputExtension);
 	}
 	// If caught any errors, show error message
 	catch (const std::runtime_error& err) {
